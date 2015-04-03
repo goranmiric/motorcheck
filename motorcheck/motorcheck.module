@@ -1,0 +1,144 @@
+<?php
+/**
+ * Implements hook_menu().
+ */
+function motorcheck_menu() {
+
+  $items['admin/config/motorcheck'] = [
+    'title' => 'Motorcheck',
+    'description' => 'Configure Mothorcheck web service parameters.',
+    'position' => 'left',
+    'weight' => -6,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => ['administer site configuration'],
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  ];
+
+  $items['admin/config/motorcheck/settings'] = [
+    'title' => 'Configure',
+    'description' => 'Configure Mothorcheck web service parameters.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['motorcheck_config_form'],
+    'access arguments' => ['access administration pages'],
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'inc/motorcheck.admin.inc',
+  ];
+
+  $items['motorcheck/registration-validate'] = [
+    'page callback' => 'motorcheck_registration_validate',
+    'access arguments' => ['access content'],
+    'file' => 'inc/motorcheck.ajax.inc'
+  ];
+
+  $items['motorcheck/api-callback'] = [
+    'page callback' => 'motorcheck_api_callback',
+    'access arguments' => ['access content'],
+    'file' => 'inc/motorcheck.ajax.inc'
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_element_info()
+ */
+function motorcheck_element_info() {
+  $elements['motorcheck_reg'] = [
+    '#default_value' => '',
+    '#input' => TRUE,
+    '#process' => ['motorcheck_reg_element_process'],
+    '#theme' => ['motorcheck_reg_field'],
+    '#theme_wrappers' => ['form_element'],
+    '#tree' => TRUE,
+    '#value_callback' => 'motorcheck_reg_element_value_callback',
+    '#element_validate' => ['motorcheck_reg_element_validate'],
+  ];
+
+  return $elements;
+}
+
+/**
+ * Element process
+ */
+function motorcheck_reg_element_process($element, $form_state, $complete_form) {
+
+  $element['motorcheck_reg'] = [
+    '#type' => 'textfield',
+    '#default_value' => isset($element['motorcheck_reg']) ?  $element['motorcheck_reg'] : NULL,
+    '#maxlength' => 20,
+    '#weight' => 0,
+    '#size'=> 60,
+    '#attributes' => [
+      'placeholder' => t('Eg: 08D47430'),
+    ],
+  ];
+
+  $element['motorcheck_reg_data'] = [
+    '#type' => 'textarea',
+    '#default_value' => isset($element['motorcheck_reg_data']) ?  $element['motorcheck_reg_data'] : NULL,
+  ];
+
+  return $element;
+}
+
+/**
+ * Element value callback
+ */
+function motorcheck_reg_element_value_callback($element, $input = FALSE, &$form_state) {
+  if (!empty($element['#default_value'])) {
+    return $element['#default_value'];
+  }
+}
+
+/**
+ * Motorcheck registration validate
+ */
+function motorcheck_reg_element_validate(&$element, &$form_state) {
+  $value = $element['#value']['motorcheck_reg'];
+  $data = $element['#value']['motorcheck_reg_data'];
+  $regex = '/^\d{2,3}[-\s]?[A-Za-z]{1,2}[-\s]?(\d{1,6})$/';
+
+  if ($value) {
+    if (!preg_match($regex, $value)) {
+      form_error($element, t('Please enter valid registration number.'));
+    }
+
+    if(empty($data) || !is_string($data) || (!is_object(json_decode($data)) && !is_array(json_decode($data)))) {
+      form_error($element, t('Invalid data.'));
+    }
+    else if(isset(json_decode($data)->errors)) {
+      form_error($element, t(json_decode($data)->errors[0]->message));
+    }
+  }
+}
+
+/**
+ * Implements hook_theme()
+ */
+function motorcheck_theme() {
+  return array(
+    'motorcheck_reg_field' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Field theme
+ */
+function theme_motorcheck_reg_field($variables) {
+  // Add js and css
+  drupal_add_js(drupal_get_path('module', 'motorcheck') . '/js/registration.js');
+  drupal_add_css(drupal_get_path('module', 'motorcheck') . '/css/motorcheck.css');
+  $element = $variables['element'];
+
+  $output = '<div class="motorcheck-reg-element">';
+  $output .= '<div id="motorcheck-registration-error" style="display: none;">' . t('Please enter valid registration number.') . '</div>';
+  $output .= drupal_render($element['motorcheck_reg']);
+  $output .= '<div style="display: none">' . drupal_render($element['motorcheck_reg_data']) . '</div>';
+  $output .= '<i class="ajax-loader" style="display: none;"></i>';
+  $output .= '</div>';
+
+  return $output;
+}

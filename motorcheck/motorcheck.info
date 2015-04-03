@@ -1,0 +1,5 @@
+name = "Motorcheck"
+description = "Module for communication with Motorcheck API."
+package = "Motorcheck"
+core = "7.x"
+configure = admin/config/motorcheck/settings

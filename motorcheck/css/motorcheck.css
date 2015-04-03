@@ -1,0 +1,18 @@
+i.ajax-loader {
+  background: grey;
+  display: block;
+  height: 25px;
+  width: 25px;
+}
+
+i.ajax-loader.fa-error {
+  background: red;
+}
+
+i.ajax-loader.fa-success {
+  background: green;
+}
+
+input:disabled {
+  background: darkgrey;
+}
